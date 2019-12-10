@@ -505,6 +505,8 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                 Expression propertyName = CreatePropertyNameExpression(elementType, propertyToExpand, source);
                 Expression propertyValue = CreatePropertyValueExpressionWithFilter(elementType, propertyToExpand, source,
                     expandItem);
+
+                Expression rawPropertyValue = propertyValue;
                 Expression nullCheck = GetNullCheckExpression(propertyToExpand, propertyValue, projection);
 
                 Expression countExpression = CreateTotalCountExpression(propertyValue, expandItem);
@@ -522,6 +524,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                     if (!propertyToExpand.Type.IsCollection())
                     {
                         propertyExpression.NullCheck = nullCheck;
+                        propertyExpression.RawValue = rawPropertyValue;
                     }
                     else if (_settings.PageSize.HasValue)
                     {

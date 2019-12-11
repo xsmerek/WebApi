@@ -137,6 +137,11 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                 memberBindings.Add(Expression.Bind(namedPropertyType.GetProperty("IsNull"), property.NullCheck));
             }
 
+            if (property.RawValue != null)
+            {
+                memberBindings.Add(Expression.Bind(namedPropertyType.GetProperty("RawValue"), property.RawValue));
+            }
+
             return Expression.MemberInit(Expression.New(namedPropertyType), memberBindings);
         }
 
@@ -208,11 +213,14 @@ namespace Microsoft.AspNet.OData.Query.Expressions
 
         private class SingleExpandedProperty<T> : NamedProperty<T>
         {
+
+            public object RawValue { get; set; }
+
             public bool IsNull { get; set; }
 
             public override object GetValue()
             {
-                return IsNull ? (object)null : Value;
+                return IsNull ? (object)null : (RawValue == null ? (object)null : Value);
             }
         }
 

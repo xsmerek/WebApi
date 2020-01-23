@@ -2,6 +2,7 @@
 // Licensed under the MIT License.  See License.txt in the project root for license information.
 
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -35,12 +36,16 @@ namespace Microsoft.AspNet.OData
         // Nested resources or structures changed at this level.
         private IDictionary<string, object> _deltaNestedResources;
 
+        private IDictionary<string, ICollection> _deltaNestedCollectionResources = new Dictionary<string, ICollection>();
+
         private TStructuralType _instance;
         private Type _structuredType;
 
         private PropertyInfo _dynamicDictionaryPropertyinfo;
         private HashSet<string> _changedDynamicProperties;
         private IDictionary<string, object> _dynamicDictionaryCache;
+
+        private IDictionary<string, ICollection> _deletedResources = new Dictionary<string, ICollection>();
 
         /// <summary>
         /// Initializes a new instance of <see cref="Delta{TStructuralType}"/>.
@@ -114,6 +119,26 @@ namespace Microsoft.AspNet.OData
         }
 
         /// <inheritdoc/>
+        public override bool TrySetPropertyCollectionValue(string name, ICollection value)
+        {
+            if (_deltaNestedCollectionResources.ContainsKey(name))
+            {
+                // Ignore duplicated nested resource.
+                return false;
+            }
+
+            _deltaNestedCollectionResources[name] = value;
+
+            return true;            
+        }
+
+        /// <inheritdoc/>
+        public override bool TryGetPropertyCollectionValue(string name, out ICollection value)
+        {
+            return _deltaNestedCollectionResources.TryGetValue(name, out value);
+        }
+
+        /// <inheritdoc/>
         public override bool TrySetPropertyValue(string name, object value)
         {
             if (value is IDelta)
@@ -124,6 +149,21 @@ namespace Microsoft.AspNet.OData
             {
                 return TrySetPropertyValueInternal(name, value);
             }
+        }
+
+        /// <inheritdoc/>
+        public override bool TrySetDeletedPropertyValue(string name, System.Collections.ICollection value)
+        {
+            // TODO: already existing key?
+            _deletedResources.Add(name, value);
+
+            return true;
+        }
+
+        /// <inheritdoc/>
+        public override bool TryGetDeletedPropertyValue(string name, out System.Collections.ICollection value)
+        {
+            return _deletedResources.TryGetValue(name, out value);            
         }
 
         /// <inheritdoc/>

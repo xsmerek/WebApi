@@ -59,6 +59,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\ContainerBuilderExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Formatter\DefaultODataETagHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Formatter\Deserialization\ODataDeserializerContext.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Formatter\Deserialization\ODataDeltaResourceSetWrapper.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Formatter\Deserialization\ODataDeletedResourceWrapper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Formatter\IETagHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Formatter\ODataBinaryValueMediaTypeMapping.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Formatter\ODataCountMediaTypeMapping.cs" />

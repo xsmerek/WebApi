@@ -43,6 +43,24 @@ namespace Microsoft.AspNet.OData
         /// <returns>True if the Property was found</returns>
         public abstract bool TryGetPropertyValue(string name, out object value);
 
+        /// <inheritdoc/>
+        public abstract bool TrySetDeletedPropertyValue(string name, System.Collections.ICollection value);
+
+        /// <inheritdoc/>
+        public abstract bool TryGetDeletedPropertyValue(string name, out System.Collections.ICollection value);
+
+        /// <inheritdoc/>
+        public abstract bool TrySetPropertyCollectionValue(string name, System.Collections.ICollection value);
+
+        /// <inheritdoc/>
+        public abstract bool TryGetPropertyCollectionValue(string name, out System.Collections.ICollection value);
+
+        /// <inheritdoc/>
+        public abstract bool TrySetPropertyReferencedValue(string name, IDelta value);
+
+        /// <inheritdoc/>
+        public abstract bool TryGetPropertyReferencedValue(string name, out IDelta value);
+
         /// <summary>
         /// Attempts to get the <see cref="Type"/> of the Property called <paramref name="name"/> from the underlying Entity.
         /// <remarks>

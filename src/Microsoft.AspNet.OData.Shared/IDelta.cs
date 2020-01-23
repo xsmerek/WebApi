@@ -45,6 +45,36 @@ namespace Microsoft.AspNet.OData
         bool TryGetPropertyValue(string name, out object value);
 
         /// <summary>
+        /// Attempts to set the collection of objects deleted from the navigation Property called <paramref name="name"/>.
+        /// </summary>
+        bool TrySetDeletedPropertyValue(string name, System.Collections.ICollection value);
+
+        /// <summary>
+        /// Attempts to get the collection of objects deleted from the navigation Property called <paramref name="name"/>.
+        /// </summary>
+        bool TryGetDeletedPropertyValue(string name, out System.Collections.ICollection value);
+
+        /// <summary>
+        /// Attempts to set the collection of delta objects that have been added or modified for the navigation Property called <paramref name="name"/>.
+        /// </summary>
+        bool TrySetPropertyCollectionValue(string name, System.Collections.ICollection value);
+
+        /// <summary>
+        /// Attempts to get the collection of delta objects that have been added or modified for the navigation Property called <paramref name="name"/>.
+        /// </summary>
+        bool TryGetPropertyCollectionValue(string name, out System.Collections.ICollection value);
+
+        /// <summary>
+        /// Attempts to set the delta object that corresponds to entity referenced by given navigation Property called <paramref name="name"/>.
+        /// </summary>
+        bool TrySetPropertyReferencedValue(string name, IDelta value);
+
+        /// <summary>
+        /// Attempts to get the delta object that corresponds to entity referenced by given navigation Property called <paramref name="name"/>.
+        /// </summary>
+        bool TryGetPropertyReferencedValue(string name, out IDelta value);
+
+        /// <summary>
         /// Attempts to get the <see cref="Type"/> of the Property called <paramref name="name"/> from the underlying Entity.
         /// </summary>
         /// <param name="name">The name of the Property</param>

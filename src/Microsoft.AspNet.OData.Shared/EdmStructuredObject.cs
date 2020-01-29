@@ -155,6 +155,42 @@ namespace Microsoft.AspNet.OData
         }
 
         /// <inheritdoc/>
+        public override bool TrySetDeletedPropertyValue(string name, System.Collections.ICollection value)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <inheritdoc/>
+        public override bool TryGetDeletedPropertyValue(string name, out System.Collections.ICollection value)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <inheritdoc/>
+        public override bool TrySetPropertyCollectionValue(string name, System.Collections.ICollection value)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <inheritdoc/>
+        public override bool TryGetPropertyCollectionValue(string name, out System.Collections.ICollection value)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <inheritdoc/>
+        public override bool TrySetPropertyReferencedValue(string name, IDelta value)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <inheritdoc/>
+        public override bool TryGetPropertyReferencedValue(string name, out IDelta value)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <inheritdoc/>
         public override bool TryGetPropertyType(string name, out Type type)
         {
             IEdmProperty property = _actualEdmType.FindProperty(name);

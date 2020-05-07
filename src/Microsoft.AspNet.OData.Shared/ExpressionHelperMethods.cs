@@ -25,6 +25,7 @@ namespace Microsoft.AspNet.OData
         private static MethodInfo _thenByDescendingMethod = GenericMethodOf(_ => Queryable.ThenByDescending<int, int>(default(IOrderedQueryable<int>), default(Expression<Func<int, int>>)));
         private static MethodInfo _enumerableThenByDescendingMethod = GenericMethodOf(_ => Enumerable.ThenByDescending<int, int>(default(IOrderedEnumerable<int>), default(Func<int, int>)));
         private static MethodInfo _countMethod = GenericMethodOf(_ => Queryable.LongCount<int>(default(IQueryable<int>)));
+        private static MethodInfo _sumMethod = GenericMethodOf(_ => Enumerable.Sum<int>(default(IEnumerable<int>), default(Func<int, decimal>)));
         private static MethodInfo _enumerableGroupByMethod = GenericMethodOf(_ => Enumerable.GroupBy<int, int>(default(IQueryable<int>), default(Func<int, int>)));        
         private static MethodInfo _groupByMethod = GenericMethodOf(_ => Queryable.GroupBy<int, int>(default(IQueryable<int>), default(Expression<Func<int, int>>)));
         private static MethodInfo _aggregateMethod = GenericMethodOf(_ => Queryable.Aggregate<int, int>(default(IQueryable<int>), default(int), default(Expression<Func<int, int, int>>)));
@@ -161,6 +162,11 @@ namespace Microsoft.AspNet.OData
         public static MethodInfo QueryableCountGeneric
         {
             get { return _countMethod; }
+        }
+
+        public static MethodInfo EnumerableSumGeneric
+        {
+            get { return _sumMethod; }
         }
 
         public static Dictionary<Type, MethodInfo> QueryableSumGenerics

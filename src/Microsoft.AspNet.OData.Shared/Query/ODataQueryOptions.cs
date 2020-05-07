@@ -7,6 +7,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Contracts;
 using System.Globalization;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Net.Http.Headers;
 using System.Reflection;
 using Microsoft.AspNet.OData.Builder;
@@ -14,6 +15,7 @@ using Microsoft.AspNet.OData.Common;
 using Microsoft.AspNet.OData.Extensions;
 using Microsoft.AspNet.OData.Formatter;
 using Microsoft.AspNet.OData.Interfaces;
+using Microsoft.AspNet.OData.Query.Expressions;
 using Microsoft.AspNet.OData.Query.Validators;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OData;
@@ -342,6 +344,69 @@ namespace Microsoft.AspNet.OData.Query
                 result = Filter.ApplyTo(result, querySettings);
             }
 
+            // URL: http://localhost:4000/api/InvoicesReceived?$filter=Id%20le%2010&aggregate=a:Amount,b:AmountNet
+            if (this.InternalRequest.QueryParameters.ContainsKey("aggregate"))
+            {
+                string aggregateUrlParam;
+                this.InternalRequest.QueryParameters.TryGetValue("aggregate", out aggregateUrlParam);
+
+                string[] aggregatePairs = aggregateUrlParam.Split(',');
+
+                //result = result
+                //    .GroupBy(i => i.NumberTheirs)
+                //    .Select(g => new MyWrapper("key", g.Key, "a", g.Sum(i => i.Amount), "b", g.Sum(i => i.AmountNet)))
+                Type elementClrType = this.Context.ElementClrType;
+
+                //    .GroupBy(i => i.NumberTheirs)
+                ParameterExpression param = Expression.Parameter(elementClrType);
+                Type groupKeyType = typeof(string);
+                MemberExpression memberExpression = Expression.Property(param, "NumberTheirs");
+
+                LambdaExpression groupByExpression = Expression.Lambda(memberExpression, param);
+
+                //IGrouping<int, elementClrType>                
+                Type groupingType = typeof(IGrouping<,>).MakeGenericType(groupKeyType, elementClrType);
+
+                //    .Select(g => new MyWrapper("key", g.Key, "a", g.Sum(i => i.Amount), "b", g.Sum(i => i.AmountNet)))
+                ParameterExpression paramG = Expression.Parameter(groupingType);
+
+                List<Expression> myWrapperInitParams = new List<Expression>();
+
+                // key:g.Key
+                myWrapperInitParams.Add(Expression.Constant("key"));
+                myWrapperInitParams.Add(Expression.Property(paramG, "Key"));
+
+                foreach (string pair in aggregatePairs)
+                {
+                    // a:Amount
+                    string[] p = pair.Split(':');
+
+                    myWrapperInitParams.Add(Expression.Constant(p[0]));
+
+                    // g.Sum(i => i.Amount)
+                    MethodCallExpression sumCallExpression = GetSumExpressionFor(elementClrType, paramG, p[1]);
+                    myWrapperInitParams.Add(Expression.TypeAs(sumCallExpression, typeof(object)));
+                }                
+
+                // new MyWrapper(...)
+                Expression myWrapperExpression = Expression.New(
+                    typeof(MyWrapper).GetConstructor(new Type[] { typeof(object[]) }),
+                    new Expression[] { 
+                        Expression.NewArrayInit(typeof(object), myWrapperInitParams.ToArray())
+                    });
+
+                // g => new MyWrapper(...)
+                LambdaExpression select = Expression.Lambda(myWrapperExpression, paramG);
+
+                result = ExpressionHelpers.GroupBy(result, groupByExpression, Context.ElementClrType, groupKeyType);
+                result = ExpressionHelpers.Select(result, select, groupingType);
+
+                InternalRequest.Context.ApplyClause = new ApplyClause(new List<TransformationNode>());
+                this.Context.ElementClrType = typeof(MyWrapper);
+
+                return result;
+            }
+
             if (IsAvailableODataQueryOption(Count, AllowedQueryOptions.Count))
             {
                 if (InternalRequest.Context.TotalCountFunc == null)
@@ -413,6 +478,20 @@ namespace Microsoft.AspNet.OData.Query
             result = ApplyPaging(result, querySettings);
 
             return result;
+        }
+
+        private static MethodCallExpression GetSumExpressionFor(Type elementClrType, ParameterExpression paramG, string propertyName)
+        {
+            // returns g.Sum(i => i.propertyName)
+
+            ParameterExpression param = Expression.Parameter(elementClrType);
+            MemberExpression memberExpression = Expression.Property(param, propertyName);
+            LambdaExpression memberLambdaExpression = Expression.Lambda(memberExpression, param);
+
+            MethodInfo sumMethod = ExpressionHelperMethods.EnumerableSumGeneric.MakeGenericMethod(elementClrType);
+            MethodCallExpression sumCallExpression = Expression.Call(sumMethod, new Expression[] { paramG, memberLambdaExpression });
+
+            return sumCallExpression;
         }
 
         internal IQueryable ApplyPaging(IQueryable result, ODataQuerySettings querySettings)

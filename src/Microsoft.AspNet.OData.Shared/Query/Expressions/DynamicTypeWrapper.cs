@@ -33,6 +33,60 @@ namespace Microsoft.AspNet.OData.Query.Expressions
     }
 
     [JsonConverter(typeof(DynamicTypeWrapperConverter))]
+    internal class MyWrapper : DynamicTypeWrapper
+    {
+        private Dictionary<string, object> _values;
+
+        public override Dictionary<string, object> Values
+        {
+            get
+            {
+                return this._values;
+            }
+        }
+
+        public MyWrapper(Dictionary<string, object> objectValues)
+        {
+            this._values = objectValues;
+        }
+
+        public MyWrapper(params object[] objectValues)
+        {
+            this._values = new Dictionary<string, object>();
+
+            for (int i = 0; i < objectValues.Length; i += 2)
+            {
+                this._values.Add((string)objectValues[i], objectValues[i+1]);
+            }            
+        }
+
+        /// <inheritdoc />
+        public override bool Equals(object obj)
+        {
+            var compareWith = obj as MyWrapper;
+            if (compareWith == null)
+            {
+                return false;
+            }
+            var dictionary1 = this.Values;
+            var dictionary2 = compareWith.Values;
+            return dictionary1.Count() == dictionary2.Count() && !dictionary1.Except(dictionary2).Any();
+        }
+
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            long hash = 1870403278L; //Arbitrary number from Anonymous Type GetHashCode implementation
+            foreach (var v in this.Values.Values)
+            {
+                hash = (hash * -1521134295L) + (v == null ? 0 : v.GetHashCode());
+            }
+
+            return (int)hash;
+        }
+    }
+
+    [JsonConverter(typeof(DynamicTypeWrapperConverter))]
     internal class GroupByWrapper : DynamicTypeWrapper
     {
         private Dictionary<string, object> _values;

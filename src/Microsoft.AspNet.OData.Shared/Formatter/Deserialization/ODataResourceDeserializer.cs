@@ -475,6 +475,19 @@ namespace Microsoft.AspNet.OData.Formatter.Deserialization
 
         private bool TryProcessDeltaNestedResource(IEdmProperty nestedProperty, object resource, ODataResourceWrapper resourceWrapper, ODataDeserializerContext readContext)
         {
+            string nestedPropertyName = EdmLibHelpers.GetClrPropertyName(nestedProperty, readContext.Model);
+            IDelta resourceDelta = resource as IDelta;
+
+            if (resourceDelta == null)
+            {
+                return false;
+            }
+
+            if (resourceWrapper == null)
+            {
+                return resourceDelta.TrySetPropertyReferencedValue(nestedPropertyName, null);
+            }
+
             if (resourceWrapper.Resource.Properties == null)
             {
                 return false;
@@ -490,16 +503,7 @@ namespace Microsoft.AspNet.OData.Formatter.Deserialization
             Delta propertyValueDelta = (Delta)Activator.CreateInstance(deltaType, clrPropertyType, structuralProperties);
             ApplyResourceProperties(propertyValueDelta, resourceWrapper, structuredType, readContext);
 
-            string nestedPropertyName = EdmLibHelpers.GetClrPropertyName(nestedProperty, readContext.Model);
-
-            IDelta resourceDelta = resource as IDelta;
-
-            if (resourceDelta != null)
-            {
-                return resourceDelta.TrySetPropertyReferencedValue(nestedPropertyName, propertyValueDelta);
-            }
-
-            return false;
+            return resourceDelta.TrySetPropertyReferencedValue(nestedPropertyName, propertyValueDelta);
         }
 
         private void ApplyDynamicResourceInNestedProperty(string propertyName, object resource, IEdmStructuredTypeReference resourceStructuredType,

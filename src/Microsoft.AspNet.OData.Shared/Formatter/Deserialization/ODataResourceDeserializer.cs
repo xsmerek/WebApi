@@ -497,8 +497,8 @@ namespace Microsoft.AspNet.OData.Formatter.Deserialization
             Type clrPropertyType = EdmLibHelpers.GetClrType(structuredType, readContext.Model);
             Type deltaType = typeof(Delta<>).MakeGenericType(clrPropertyType);
 
-            IEnumerable<string> structuralProperties = structuredType.StructuralProperties()
-                .Select(edmProperty => EdmLibHelpers.GetClrPropertyName(edmProperty, readContext.Model));
+            // set navigation properties as editable so that @odata.id works for nested resources
+            IEnumerable<string> structuralProperties = GetUpdatableProperties(readContext.Model, structuredType);
 
             Delta propertyValueDelta = (Delta)Activator.CreateInstance(deltaType, clrPropertyType, structuralProperties);
             ApplyResourceProperties(propertyValueDelta, resourceWrapper, structuredType, readContext);
@@ -585,6 +585,11 @@ namespace Microsoft.AspNet.OData.Formatter.Deserialization
                 IEdmNavigationProperty navigationProperty = nestedProperty as IEdmNavigationProperty;
                 if (navigationProperty != null)
                 {
+                    if (TryProcessDeltaNestedResourceSet(nestedProperty, resource, resourceSetWrapper, readContext))
+                    {
+                        return;
+                    }
+
                     string message = Error.Format(SRResources.CannotPatchNavigationProperties, navigationProperty.Name,
                         navigationProperty.DeclaringEntityType().FullName());
                     throw new ODataException(message);
@@ -595,6 +600,46 @@ namespace Microsoft.AspNet.OData.Formatter.Deserialization
 
             string propertyName = EdmLibHelpers.GetClrPropertyName(nestedProperty, readContext.Model);
             DeserializationHelpers.SetCollectionProperty(resource, nestedProperty, value, propertyName);
+        }
+
+        private bool TryProcessDeltaNestedResourceSet(IEdmProperty collectionProperty, object resource, ODataResourceSetWrapper resourceSetWrapper, ODataDeserializerContext readContext)
+        {
+            string collectionPropertyName = EdmLibHelpers.GetClrPropertyName(collectionProperty, readContext.Model);
+            IDelta resourceDelta = resource as IDelta;
+
+            if (resourceDelta == null)
+            {
+                return false;
+            }
+
+            if (resourceSetWrapper == null)
+            {
+                return resourceDelta.TrySetPropertyReferencedValue(collectionPropertyName, null);
+            }
+
+            if (resourceSetWrapper.Resources == null)
+            {
+                return false;
+            }
+
+            IEdmStructuredTypeReference structuredElementType = collectionProperty.Type.AsCollection().ElementType().AsStructured();
+
+            Type clrElementType = EdmLibHelpers.GetClrType(structuredElementType, readContext.Model);
+            Type deltaType = typeof(Delta<>).MakeGenericType(clrElementType);
+
+            IEnumerable<string> structuralProperties = GetUpdatableProperties(readContext.Model, structuredElementType);
+
+            IList elementDeltas = new ArrayList();
+
+            foreach (ODataResourceWrapper resourceWrapper in resourceSetWrapper.Resources)
+            {
+                Delta elementDelta = (Delta)Activator.CreateInstance(deltaType, clrElementType, structuralProperties);
+                ApplyResourceProperties(elementDelta, resourceWrapper, structuredElementType, readContext);
+
+                elementDeltas.Add(elementDelta);
+            }
+
+            return resourceDelta.TrySetPropertyCollectionValue(collectionPropertyName, elementDeltas);
         }
 
         private void ApplyDeltaResourceSetInNestedProperty(IEdmProperty nestedProperty, object resource,
@@ -725,10 +770,9 @@ namespace Microsoft.AspNet.OData.Formatter.Deserialization
 
             foreach (ODataResourceWrapper resourceItemWrapper in resourceSetWrapper.Resources)
             {
-                IEnumerable<string> structuralProperties = structuredType.StructuralProperties()
-                        .Select(edmProperty => EdmLibHelpers.GetClrPropertyName(edmProperty, model));
+                IEnumerable<string> updatableProperties = GetUpdatableProperties(model, structuredType);
 
-                Delta resourceItem = (Delta)Activator.CreateInstance(deltaType, clrItemType, structuralProperties);
+                Delta resourceItem = (Delta)Activator.CreateInstance(deltaType, clrItemType, updatableProperties);
                 ApplyResourceProperties(resourceItem, resourceItemWrapper, structuredType, readContext);
 
                 addedResult.Add(resourceItem);
@@ -747,6 +791,17 @@ namespace Microsoft.AspNet.OData.Formatter.Deserialization
             }
 
             deletedItems = deletedResult;
+        }
+
+        private static IEnumerable<string> GetUpdatableProperties(IEdmModel model, IEdmStructuredTypeReference structuredType)
+        {
+            // we consider navigation properties to be editable so that @odata.id works for nested resources
+            IEnumerable<string> updatableProperties = structuredType.StructuralProperties()
+                    .Cast<IEdmProperty>()
+                    .Union(structuredType.NavigationProperties())
+                    .Select(edmProperty => EdmLibHelpers.GetClrPropertyName(edmProperty, model));
+
+            return updatableProperties;
         }
     }
 }

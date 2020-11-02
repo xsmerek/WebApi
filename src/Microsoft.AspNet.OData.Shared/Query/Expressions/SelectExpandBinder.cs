@@ -85,7 +85,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             ParameterExpression source = Expression.Parameter(elementType);
 
             // expression looks like -> new Wrapper { Instance = source , Properties = "...", Container = new PropertyContainer { ... } }
-            Expression projectionExpression = ProjectElement(source, selectExpandQuery.SelectExpandClause, _context.ElementType as IEdmStructuredType, navigationSource);
+            Expression projectionExpression = ProjectElement(source, selectExpandQuery.SelectExpandClause, _context.ElementType as IEdmStructuredType, navigationSource, selectExpandQuery.ExcludeKey);
 
             // expression looks like -> source => new Wrapper { Instance = source .... }
             LambdaExpression projectionLambdaExpression = Expression.Lambda(projectionExpression, source);
@@ -256,7 +256,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
 
         // Generates the expression
         //      source => new Wrapper { Instance = source, Container = new PropertyContainer { ..expanded properties.. } }
-        internal Expression ProjectElement(Expression source, SelectExpandClause selectExpandClause, IEdmStructuredType structuredType, IEdmNavigationSource navigationSource)
+        internal Expression ProjectElement(Expression source, SelectExpandClause selectExpandClause, IEdmStructuredType structuredType, IEdmNavigationSource navigationSource, bool excludeKey = false)
         {
             Contract.Assert(source != null);
 
@@ -317,7 +317,8 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                 bool isContainDynamicPropertySelection = GetSelectExpandProperties(_model, structuredType, navigationSource, selectExpandClause,
                     out propertiesToInclude,
                     out propertiesToExpand,
-                    out autoSelectedProperties);
+                    out autoSelectedProperties,
+                    excludeKey);
 
                 bool isSelectingOpenTypeSegments = isContainDynamicPropertySelection || IsSelectAllOnOpenType(selectExpandClause, structuredType);
 
@@ -352,12 +353,14 @@ namespace Microsoft.AspNet.OData.Query.Expressions
         /// <param name="propertiesToInclude">The out properties to include at current level, could be null.</param>
         /// <param name="propertiesToExpand">The out properties to expand at current level, could be null.</param>
         /// <param name="autoSelectedProperties">The out auto selected properties to include at current level, could be null.</param>
+        /// <param name="excludeKey">Key properties are automatically added to query by default. This flag indicates if the key properties should be excluded.</param>
         /// <returns>true if the select contains dynamic property selection, false if it's not.</returns>
         internal static bool GetSelectExpandProperties(IEdmModel model, IEdmStructuredType structuredType, IEdmNavigationSource navigationSource,
             SelectExpandClause selectExpandClause,
             out IDictionary<IEdmStructuralProperty, PathSelectItem> propertiesToInclude,
             out IDictionary<IEdmNavigationProperty, ExpandedReferenceSelectItem> propertiesToExpand,
-            out ISet<IEdmStructuralProperty> autoSelectedProperties)
+            out ISet<IEdmStructuralProperty> autoSelectedProperties,
+            bool excludeKey = false)
         {
             Contract.Assert(selectExpandClause != null);
 
@@ -400,7 +403,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             {
                 // We should include the keys if it's an entity.
                 IEdmEntityType entityType = structuredType as IEdmEntityType;
-                if (entityType != null)
+                if (entityType != null && !excludeKey)
                 {
                     foreach (IEdmStructuralProperty keyProperty in entityType.Key())
                     {

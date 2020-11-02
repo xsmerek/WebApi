@@ -136,6 +136,11 @@ namespace Microsoft.AspNet.OData.Query
         public TopQueryOption Top { get; private set; }
 
         /// <summary>
+        /// Gets the <see cref="DistinctQueryOption"/>.
+        /// </summary>
+        public DistinctQueryOption Distinct { get; private set; }
+
+        /// <summary>
         /// Gets the <see cref="CountQueryOption"/>.
         /// </summary>
         public CountQueryOption Count { get; private set; }
@@ -400,6 +405,11 @@ namespace Microsoft.AspNet.OData.Query
                 }
             }
 
+            if (IsDistinct())
+            {
+                result = new DistinctQueryOption().ApplyTo(result);
+            }
+
             if (IsAvailableODataQueryOption(Skip, AllowedQueryOptions.Skip))
             {
                 result = Skip.ApplyTo(result, querySettings);
@@ -413,6 +423,14 @@ namespace Microsoft.AspNet.OData.Query
             result = ApplyPaging(result, querySettings);
 
             return result;
+        }
+
+        private bool IsDistinct()
+        {
+            if (this.InternalRequest.QueryParameters.TryGetValue("distinct", out string distinctEnabled))
+                return distinctEnabled == "true";
+
+            return false;
         }
 
         internal IQueryable ApplyPaging(IQueryable result, ODataQuerySettings querySettings)
@@ -1020,6 +1038,11 @@ namespace Microsoft.AspNet.OData.Query
                     SelectExpand.RawExpand,
                     SelectExpand.Context,
                     processedClause);
+
+                if (IsDistinct())
+                {
+                    newSelectExpand.ExcludeKey = true;
+                }
 
                 InternalRequest.Context.ProcessedSelectExpandClause = processedClause;
                 InternalRequest.Context.QueryOptions = this;

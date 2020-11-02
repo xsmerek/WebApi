@@ -140,6 +140,11 @@ namespace Microsoft.AspNet.OData.Query
             }
         }
 
+        /// <summary>
+        /// Key properties are automatically added to query by default. This flag indicates if the key properties should be excluded.
+        /// </summary>
+        public bool ExcludeKey { get; set; }
+
         internal SelectExpandClause ProcessedSelectExpandClause
         {
             get

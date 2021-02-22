@@ -504,6 +504,22 @@ namespace Microsoft.AspNet.OData.Formatter.Deserialization
             }
 
             IEdmStructuredTypeReference structuredType = nestedProperty.Type.AsStructured();
+            Delta propertyValueDelta = CreateDeltaInstance(readContext, resourceWrapper, structuredType);
+
+            ApplyResourceProperties(propertyValueDelta, resourceWrapper, structuredType, readContext);
+
+            return resourceDelta.TrySetPropertyReferencedValue(nestedPropertyName, propertyValueDelta);
+        }
+
+        /// <summary>
+        /// Creates new delta object for target resource.
+        /// </summary>
+        /// <param name="readContext">The deserializer context.</param>
+        /// <param name="resourceWrapper">The resource object containing the annotations.</param>
+        /// <param name="structuredType">The type of the resource.</param>
+        /// <returns></returns>        
+        protected virtual Delta CreateDeltaInstance(ODataDeserializerContext readContext, ODataResourceWrapper resourceWrapper, IEdmStructuredTypeReference structuredType)
+        {
             Type clrPropertyType = EdmLibHelpers.GetClrType(structuredType, readContext.Model);
             Type deltaType = typeof(Delta<>).MakeGenericType(clrPropertyType);
 
@@ -511,9 +527,8 @@ namespace Microsoft.AspNet.OData.Formatter.Deserialization
             IEnumerable<string> structuralProperties = GetUpdatableProperties(readContext.Model, structuredType);
 
             Delta propertyValueDelta = (Delta)Activator.CreateInstance(deltaType, clrPropertyType, structuralProperties);
-            ApplyResourceProperties(propertyValueDelta, resourceWrapper, structuredType, readContext);
 
-            return resourceDelta.TrySetPropertyReferencedValue(nestedPropertyName, propertyValueDelta);
+            return propertyValueDelta;
         }
 
         private void ApplyDynamicResourceInNestedProperty(string propertyName, object resource, IEdmStructuredTypeReference resourceStructuredType,
@@ -841,7 +856,13 @@ namespace Microsoft.AspNet.OData.Formatter.Deserialization
             deletedItems = deletedResult;
         }
 
-        private static IEnumerable<string> GetUpdatableProperties(IEdmModel model, IEdmStructuredTypeReference structuredType)
+        /// <summary>
+        /// Returns all updatable properties for given structured type.
+        /// </summary>
+        /// <param name="model">Edm model.</param>
+        /// <param name="structuredType">The type of the resource.</param>
+        /// <returns></returns>
+        protected static IEnumerable<string> GetUpdatableProperties(IEdmModel model, IEdmStructuredTypeReference structuredType)
         {
             // we consider navigation properties to be editable so that @odata.id works for nested resources
             IEnumerable<string> updatableProperties = structuredType.StructuralProperties()
